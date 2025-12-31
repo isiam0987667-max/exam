@@ -1,0 +1,136 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width">
+<title>MCQ Exam</title>
+<style>
+body{font-family:sans-serif}
+.option{
+  width:36px;height:36px;
+  border:2px solid #000;
+  border-radius:50%;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  margin:4px
+}
+.active{background:#000;color:#fff}
+#timer{color:red;font-size:18px}
+#examArea{display:none}
+</style>
+</head>
+<body>
+
+<h2>MCQ Exam</h2>
+
+<input id="studentId" placeholder="Enter Student ID"><br><br>
+<button onclick="startExam()">পরীক্ষা শুরু</button>
+
+<hr>
+
+<div id="examArea">
+  <h3 id="examTitle"></h3>
+  <div id="timer"></div>
+  <div id="questions"></div>
+  <button onclick="submit()">Submit</button>
+</div>
+
+<script>
+const backendURL = "http://localhost:3000"; // তোমার backend URL
+let responses = {};
+let timeLeft, timer;
+let examData = null;
+
+function select(q,o,e){
+  responses[q]=o;
+  [...e.parentNode.children].forEach(x=>x.classList.remove("active"));
+  e.classList.add("active");
+}
+
+function startExam(){
+  const sid = studentId.value.trim();
+  if(!sid){
+    alert("Student ID দিন");
+    return;
+  }
+
+  fetch(backendURL+"/exam")
+  .then(r=>r.json())
+  .then(exam=>{
+    if(!exam){
+      alert("কোনো পরীক্ষা চালু নেই");
+      return;
+    }
+
+    examData = exam;
+    document.getElementById("examArea").style.display="block";
+    document.getElementById("examTitle").innerText = exam.name;
+
+    loadQuestions();
+    startTimer();
+  });
+}
+
+function loadQuestions(){
+  questions.innerHTML="";
+  for(let i=1;i<=examData.questions;i++){
+    let d=document.createElement("div");
+    d.innerHTML=`Q${i} :
+    <span class="option" onclick="select(${i},'ক',this)">ক</span>
+    <span class="option" onclick="select(${i},'খ',this)">খ</span>
+    <span class="option" onclick="select(${i},'গ',this)">গ</span>
+    <span class="option" onclick="select(${i},'ঘ',this)">ঘ</span>`;
+    questions.appendChild(d);
+  }
+}
+
+function startTimer(){
+  timeLeft = examData.duration * 60;
+  timer = setInterval(()=>{
+    let m = Math.floor(timeLeft/60);
+    let s = timeLeft % 60;
+    timer.innerText = `Time Left: ${m}:${s<10?'0':''}${s}`;
+    if(--timeLeft < 0){
+      clearInterval(timer);
+      submit();
+    }
+  },1000);
+}
+
+function submit(){
+  clearInterval(timer);
+
+  fetch(backendURL+"/submit",{
+    method:"POST",
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      studentId: studentId.value,
+      responses
+    })
+  })
+  .then(r=>r.json())
+  .then(d=>{
+    if(d.error){
+      alert(d.error);
+      return;
+    }
+
+    let html = `<h3>Result: ${d.score}/${d.total}</h3>`;
+
+    d.review.forEach(r=>{
+      html += `
+      <div style="border:1px solid #ccc;padding:6px;margin:6px">
+        <b>Q${r.question}</b><br>
+        Status: ${r.status==="correct"?"🟢 Correct":"🔴 Wrong"}<br>
+        Your Answer: ${r.given}<br>
+        Correct Answer: ${r.correct}
+      </div>`;
+    });
+
+    document.body.innerHTML = html;
+  });
+}
+</script>
+
+</body>
+</html>
