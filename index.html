@@ -1,105 +1,165 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width">
-<title>MCQ Exam</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AOC++ Medieval War Simulator</title>
+
 <style>
-body{font-family:sans-serif}
-.option{
-  width:36px;height:36px;
-  border:2px solid #000;
-  border-radius:50%;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  margin:4px
+body{margin:0;font-family:Arial;background:#020617;color:#e5e7eb}
+.top{background:#020617;padding:6px;display:flex;gap:6px;flex-wrap:wrap;font-size:13px}
+.top span{background:#1e293b;padding:4px 6px;border-radius:6px}
+button{background:#2563eb;color:#fff;border:none;padding:8px;border-radius:6px}
+.panel{display:none;padding:8px}
+.active{display:block}
+
+/* MAP */
+.map-container{
+position:relative;
+width:100%;
+height:70vh;
+background:#0f172a;
+border-top:2px solid #1e293b;
 }
-.active{background:#000;color:#fff}
-#timer{color:red;font-size:18px}
-#examArea{display:none}
+.kingdom{
+position:absolute;
+background:#16a34a;
+color:#000;
+padding:4px 6px;
+border-radius:6px;
+font-size:11px;
+}
+.enemy{background:#dc2626;color:#fff}
+.menu{
+position:fixed;
+bottom:0;
+width:100%;
+background:#020617;
+display:flex;
+justify-content:space-around;
+}
 </style>
 </head>
+
 <body>
 
-<h2>MCQ Exam</h2>
-<input id="studentId" placeholder="Enter Student ID"><br><br>
-<button onclick="startExam()">পরীক্ষা শুরু</button>
-<hr>
-<div id="examArea">
-  <h3 id="examTitle"></h3>
-  <div id="timer"></div>
-  <div id="questions"></div>
-  <button onclick="submit()">Submit</button>
+<!-- TOP BAR -->
+<div class="top">
+<span>💰 <b id="gold"></b></span>
+<span>🍞 <b id="food"></b></span>
+<span>👥 <b id="pop"></b></span>
+<span>⚔ <b id="army"></b></span>
+<span>😊 <b id="stab"></b>%</span>
+<span>📅 <b id="year"></b></span>
+</div>
+
+<!-- HOME -->
+<div id="home" class="panel active">
+<h2>🌍 Medieval World</h2>
+<button onclick="openMap()">OPEN WORLD MAP</button>
+</div>
+
+<!-- MAP -->
+<div id="mapPanel" class="panel">
+<div class="map-container" id="map"></div>
+</div>
+
+<!-- INFO -->
+<div id="info" class="panel"></div>
+
+<div class="menu">
+<button onclick="open('home')">Home</button>
+<button onclick="open('mapPanel')">Map</button>
+<button onclick="endTurn()">End Turn</button>
 </div>
 
 <script>
-const backendURL = "https://backend-mvkh.onrender.com"; // Render link হলে পরিবর্তন করো
-let responses = {};
-let timeLeft, timer;
-let examData = null;
+let game={
+gold:600,food:500,pop:1600,army:500,stab:70,year:1400,
+generals:1
+};
 
-function select(q,o,e){
-  responses[q]=o;
-  [...e.parentNode.children].forEach(x=>x.classList.remove("active"));
-  e.classList.add("active");
+let kingdoms=[
+{name:"England",x:30,y:25,army:400,owner:true},
+{name:"France",x:35,y:35,army:450,owner:false},
+{name:"Holy Roman Empire",x:45,y:30,army:500,owner:false},
+{name:"Castile",x:30,y:45,army:350,owner:false},
+{name:"Ottoman Empire",x:55,y:40,army:600,owner:false},
+{name:"Mamluk Sultanate",x:60,y:55,army:500,owner:false},
+{name:"Timurid Empire",x:70,y:45,army:650,owner:false},
+{name:"Ming China",x:85,y:35,army:800,owner:false},
+{name:"Delhi Sultanate",x:75,y:55,army:600,owner:false}
+];
+
+function open(id){
+document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+document.getElementById(id).classList.add("active");
 }
 
-function startExam(){
-  const sid = studentId.value.trim();
-  if(!sid){alert("Student ID দিন");return;}
-
-  fetch(backendURL+"/exam").then(r=>r.json()).then(exam=>{
-    if(!exam){alert("কোনো পরীক্ষা নেই");return;}
-    examData=exam;
-    document.getElementById("examArea").style.display="block";
-    document.getElementById("examTitle").innerText=exam.name;
-    loadQuestions();
-    startTimer();
-  });
+function openMap(){
+open("mapPanel");
+renderMap();
 }
 
-function loadQuestions(){
-  questions.innerHTML="";
-  for(let i=1;i<=examData.questions;i++){
-    let d=document.createElement("div");
-    d.innerHTML=`Q${i} :
-      <span class="option" onclick="select(${i},'ক',this)">ক</span>
-      <span class="option" onclick="select(${i},'খ',this)">খ</span>
-      <span class="option" onclick="select(${i},'গ',this)">গ</span>
-      <span class="option" onclick="select(${i},'ঘ',this)">ঘ</span>`;
-    questions.appendChild(d);
-  }
+function render(){
+gold.innerText=game.gold;
+food.innerText=game.food;
+pop.innerText=game.pop;
+army.innerText=game.army;
+stab.innerText=game.stab;
+year.innerText=game.year;
 }
 
-function startTimer(){
-  timeLeft = examData.duration * 60;
-  timer=setInterval(()=>{
-    let m=Math.floor(timeLeft/60), s=timeLeft%60;
-    timer.innerText=`Time Left: ${m}:${s<10?'0':''}${s}`;
-    if(--timeLeft<0){clearInterval(timer);submit();}
-  },1000);
+function renderMap(){
+const map=document.getElementById("map");
+map.innerHTML="";
+kingdoms.forEach((k,i)=>{
+let d=document.createElement("div");
+d.className="kingdom "+(k.owner?"":"enemy");
+d.style.left=k.x+"%";
+d.style.top=k.y+"%";
+d.innerText=k.name;
+d.onclick=()=>openInfo(i);
+map.appendChild(d);
+});
 }
 
-function submit(){
-  clearInterval(timer);
-  fetch(backendURL+"/submit",{
-    method:"POST",
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({studentId:studentId.value,responses})
-  }).then(r=>r.json()).then(d=>{
-    if(d.error){alert(d.error);return;}
-    let html=`<h3>Result: ${d.score}/${d.total}</h3>`;
-    d.review.forEach(r=>{
-      html+=`<div style="border:1px solid #ccc;padding:6px;margin:6px">
-        <b>Q${r.question}</b><br>
-        Status: ${r.status==="correct"?"🟢 Correct":"🔴 Wrong"}<br>
-        Your Answer: ${r.given}<br>
-        Correct Answer: ${r.correct}
-      </div>`;
-    });
-    document.body.innerHTML=html;
-  });
+function openInfo(i){
+let k=kingdoms[i];
+open("info");
+info.innerHTML=`
+<h3>${k.name}</h3>
+<p>Army: ${k.army}</p>
+<p>Status: ${k.owner?"Your Kingdom":"Enemy"}</p>
+${!k.owner?`<button onclick="attack(${i})">⚔ Attack</button>`:""}
+<button onclick="open('mapPanel')">Back</button>
+`;
 }
+
+function attack(i){
+let enemy=kingdoms[i];
+let myPower=game.army + game.generals*100 + game.stab;
+if(myPower>enemy.army){
+enemy.owner=true;
+game.gold+=120;
+game.stab+=3;
+}else{
+game.army-=150;
+game.stab-=5;
+}
+openMap();
+render();
+}
+
+function endTurn(){
+game.year++;
+game.food+=60;
+game.pop+=Math.floor(game.pop*(game.stab/200));
+render();
+}
+
+render();
 </script>
+
 </body>
 </html>
