@@ -3,28 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AOC++ FINAL PRO++ UPGRADE</title>
+<title>Medieval Kingdom Simulator AI War</title>
 <style>
-body{margin:0;font-family:Arial;background:#020617;color:#e5e7eb}
-.top{display:flex;flex-wrap:wrap;gap:6px;padding:8px;background:#020617;font-size:13px}
-.top span{background:#1e293b;padding:4px 6px;border-radius:6px}
-.panel{display:none;padding:10px;overflow-y:auto;max-height:70vh}
-.active{display:block}
-button,input{padding:8px;border-radius:6px;border:none;margin:4px;cursor:pointer}
-button{background:#2563eb;color:#fff}
-input{width:80px}
-
-.map{position:relative;height:65vh;background:linear-gradient(#0f172a,#020617);border-top:2px solid #1e293b;}
-.k{position:absolute;padding:4px 6px;font-size:11px;border-radius:6px;color:#fff;text-align:center;font-weight:bold}
-.enemy{background:#dc2626;}
-.owned{background:#16a34a;}
-
-.menu{position:fixed;bottom:0;width:100%;background:#020617;display:flex;flex-wrap:wrap;justify-content:space-around}
-.box{background:#1e293b;padding:8px;border-radius:8px;margin:6px 0}
+body{margin:0;font-family:Arial;background:#020617;color:#e5e7eb;}
+.top{display:flex;flex-wrap:wrap;gap:6px;padding:8px;background:#020617;font-size:13px;}
+.top span{background:#1e293b;padding:4px 6px;border-radius:6px;}
+.panel{display:none;padding:10px;overflow-y:auto;max-height:70vh;}
+.active{display:block;}
+button,input,select{padding:8px;border-radius:6px;border:none;margin:4px;cursor:pointer;}
+button{background:#2563eb;color:#fff;}
+input,select{width:80px;}
+.box{background:#1e293b;padding:8px;border-radius:8px;margin:6px 0;}
+.menu{position:fixed;bottom:0;width:100%;background:#020617;display:flex;flex-wrap:wrap;justify-content:space-around;}
 </style>
 </head>
-
 <body>
+
 <div class="top">
 <span>💰 <b id="gold"></b></span>
 <span>🍞 <b id="food"></b></span>
@@ -34,170 +28,237 @@ input{width:80px}
 <span>📅 <b id="year"></b></span>
 </div>
 
-<div id="home" class="panel active">
-<h2>🌍 Medieval World Simulator</h2>
-<button onclick="openP('mapP')">Open Map</button>
+<!-- Start Selection Panel -->
+<div id="startP" class="panel active">
+<h2>🏰 Select Your Kingdom</h2>
+<select id="kingdomSelect"></select>
+<button onclick="startGame()">Start Game</button>
+</div>
+
+<!-- Panels -->
+<div id="home" class="panel">
+<h2>🏰 Medieval Kingdom Simulator</h2>
 <button onclick="openP('armyP')">Army</button>
-<button onclick="openP('trade')">Trade</button>
-<button onclick="openP('council')">Council</button>
+<button onclick="openP('productionP')">Production</button>
+<button onclick="openP('tradeP')">Trade</button>
+<button onclick="openP('councilP')">Council</button>
+<button onclick="openP('attackP')">Attack</button>
+<button onclick="openP('statusP')">AI Status</button>
+<button onclick="endTurn()">End Turn</button>
 <button onclick="saveGame()">💾 Save Game</button>
 <button onclick="loadGame()">📂 Load Game</button>
 </div>
 
-<div id="mapP" class="panel"><div class="map" id="map"></div></div>
-<div id="info" class="panel"></div>
-
 <div id="armyP" class="panel">
-<h3>⚔ Army & Units</h3>
+<h3>⚔ Army Management</h3>
 <div class="box">
-Recruit Soldiers: <input type="number" id="recNum" value="100">
-<button onclick="recruit()">Recruit</button>
+Recruit Infantry: <input type="number" id="recInf" value="50">
+<button onclick="recruit('infantry')">Recruit</button>
 </div>
 <div class="box">
-<h4>🛡 Units</h4>
-<button onclick="addUnit('Infantry')">🛡 Infantry</button>
-<button onclick="addUnit('Cavalry')">🐎 Cavalry</button>
-<button onclick="addUnit('Archer')">🏹 Archer</button>
-<p id="units">No units</p>
+Recruit Cavalry: <input type="number" id="recCav" value="20">
+<button onclick="recruit('cavalry')">Recruit</button>
 </div>
 <div class="box">
-<button onclick="hireGeneral()">🎖 Hire General (150 Gold)</button>
+Recruit Archer: <input type="number" id="recArc" value="30">
+<button onclick="recruit('archer')">Recruit</button>
+</div>
 <p>Generals: <b id="gen"></b></p>
+<p>Units: <b id="units"></b></p>
+</div>
+
+<div id="productionP" class="panel">
+<h3>🏭 Production</h3>
+<div class="box">
+Farm: <input type="number" id="farmNum" value="2"> <button onclick="setProd('farm')">Set</button>
+</div>
+<div class="box">
+Factory: <input type="number" id="facNum" value="1"> <button onclick="setProd('factory')">Set</button>
 </div>
 </div>
 
-<div id="trade" class="panel">
+<div id="tradeP" class="panel">
 <h3>🤝 Trade</h3>
 <button onclick="sellFood()">Sell 100 Food → +80 Gold</button>
 <button onclick="buyFood()">Buy 100 Food → -90 Gold</button>
 </div>
 
-<div id="council" class="panel">
+<div id="councilP" class="panel">
 <h3>🏛 Council & Laws</h3>
 <div class="box">
 Tax Rate: <input type="number" id="tax" value="10"> % <button onclick="applyTax()">Apply</button>
 </div>
 <div class="box">
-<button onclick="law('tax')">High Tax Law</button>
-<button onclick="law('growth')">Population Growth Law</button>
-<button onclick="law('military')">Military Focus Law</button>
-<button onclick="law('trade')">Trade Focus Law</button>
+<button onclick="law('tax')">High Tax</button>
+<button onclick="law('growth')">Population Growth</button>
+<button onclick="law('military')">Military Focus</button>
+<button onclick="law('trade')">Trade Focus</button>
 </div>
+</div>
+
+<div id="attackP" class="panel">
+<h3>⚔ Attack Other Kingdoms</h3>
+<select id="targetSelect"></select>
+<div class="box">
+Send Infantry: <input type="number" id="atkInf" value="0">
+Send Cavalry: <input type="number" id="atkCav" value="0">
+Send Archer: <input type="number" id="atkArc" value="0">
+<button onclick="attack()">Attack!</button>
+</div>
+</div>
+
+<div id="statusP" class="panel">
+<h3>📊 AI Kingdoms Status</h3>
+<div id="aiStatus"></div>
 </div>
 
 <div class="menu">
 <button onclick="openP('home')">Home</button>
-<button onclick="openP('mapP')">Map</button>
+<button onclick="openP('armyP')">Army</button>
+<button onclick="openP('productionP')">Production</button>
+<button onclick="openP('tradeP')">Trade</button>
+<button onclick="openP('councilP')">Council</button>
+<button onclick="openP('attackP')">Attack</button>
+<button onclick="openP('statusP')">AI Status</button>
 <button onclick="endTurn()">End Turn</button>
 </div>
 
 <script>
-// ====== GAME STATE ======
-let game={gold:600,food:500,pop:1600,stab:70,year:1400,units:[],generals:0,army:0};
+// ===== GAME STATE =====
+let kingdoms=[];
+let player=null;
+let game={gold:600,food:500,pop:1600,stab:70,year:1400,units:{infantry:200,cavalry:50,archer:50},generals:1,production:{farm:2,factory:1}};
 
-// ====== KINGDOMS ======
-let kingdoms=[
-{name:"England",x:10,y:20,army:{infantry:200,cavalry:50,archer:50},population:1000,owner:true,production:{farm:2,factory:1}},
-{name:"France",x:25,y:30,army:{infantry:250,cavalry:100,archer:100},population:1200,owner:false,production:{farm:3,factory:1}},
-{name:"HRE",x:40,y:25,army:{infantry:300,cavalry:100,archer:100},population:1400,owner:false,production:{farm:2,factory:2}},
-{name:"Castile",x:15,y:45,army:{infantry:150,cavalry:100,archer:100},population:900,owner:false,production:{farm:2,factory:1}}
-];
-
-// ====== PANEL MANAGEMENT ======
-function openP(id){document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));document.getElementById(id).classList.add("active");render();}
-
-// ====== RENDER ======
-function render(){
-game.army=0;
-kingdoms.forEach(k=>{if(k.owner){for(let u in k.army){game.army+=k.army[u];}}});
-document.getElementById("gold").innerText=game.gold;
-document.getElementById("food").innerText=game.food;
-document.getElementById("pop").innerText=game.pop;
-document.getElementById("army").innerText=game.army;
-document.getElementById("stab").innerText=game.stab;
-document.getElementById("year").innerText=game.year;
-document.getElementById("gen").innerText=game.generals;
-document.getElementById("units").innerText=game.units.join(", ")||"No units";
-renderMap();
-}
-
-// ====== MAP ======
-function openMap(){openP('mapP');renderMap();}
-function renderMap(){
-const map=document.getElementById("map"); map.innerHTML="";
-kingdoms.forEach((k,i)=>{
-let d=document.createElement("div");
-d.className="k "+(k.owner?"owned":"enemy");
-d.style.left=k.x+"%"; d.style.top=k.y+"%";
-d.innerText=k.name;
-d.onclick=()=>infoK(i); map.appendChild(d);
+// ===== INITIALIZE 28 KINGDOMS =====
+function initKingdoms(){
+const names=["England","France","HRE","Castile","Portugal","Aragon","Naples","Poland","Lithuania","Hungary","Bohemia","Denmark","Sweden","Norway","Russia","Ottoman","Venice","Milan","Florence","Saxony","Bavaria","Brandenburg","Scotland","Ireland","Wales","Burgundy","Austria","Byzantium"];
+kingdoms=[];
+names.forEach((n,i)=>{
+kingdoms.push({name:n,population:1000+Math.floor(Math.random()*1000),units:{infantry:100+Math.floor(Math.random()*100),cavalry:50+Math.floor(Math.random()*50),archer:50+Math.floor(Math.random()*50)},generals:1,production:{farm:2,factory:1},owner:false});
 });
 }
 
-// ====== INFO ======
-function infoK(i){
-let k=kingdoms[i]; openP("info");
-info.innerHTML=`
-<h3>${k.name}</h3>
-Population: ${k.population}<br>
-Status: ${k.owner?"Owned":"Enemy"}<br>
-Army:<br>
-&nbsp;🛡 Infantry: ${k.army.infantry}<br>
-&nbsp;🐎 Cavalry: ${k.army.cavalry}<br>
-&nbsp;🏹 Archer: ${k.army.archer}<br>
-Generals: ${k.owner?game.generals:0}<br>
-Production:<br>
-&nbsp;🌾 Farm: ${k.production.farm} per turn<br>
-&nbsp;🏭 Factory: ${k.production.factory} per turn<br>
-${!k.owner?`<button onclick="attack(${i})">Attack</button>`:""}
-<button onclick="openMap()">Back</button>`;
+// ===== START GAME =====
+function startGame(){
+let sel=document.getElementById("kingdomSelect").value;
+player=kingdoms[sel];
+player.owner=true;
+game.units={...player.units};
+game.generals=player.generals;
+game.production={...player.production};
+openP('home');
+updateTargets();
+render();
 }
 
-// ====== ATTACK ======
-function attack(i){
-let enemy=kingdoms[i];
-let power=game.army + game.generals*100 + game.units.length*50;
-let enemyPower=enemy.army.infantry + enemy.army.cavalry*2 + enemy.army.archer;
-if(power>enemyPower){enemy.owner=true;game.gold+=120;game.stab+=3;}
-else{let lost=Math.floor(enemyPower/5);game.army-=lost;game.stab-=5;}
-aiTurn(); openMap(); render();
+// ===== PANEL MANAGEMENT =====
+function openP(id){document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));document.getElementById(id).classList.add("active");render();}
+
+// ===== RENDER =====
+function render(){
+document.getElementById("gold").innerText=game.gold;
+document.getElementById("food").innerText=game.food;
+document.getElementById("pop").innerText=game.pop;
+let totalArmy=game.units.infantry+game.units.cavalry+game.units.archer;
+document.getElementById("army").innerText=totalArmy;
+document.getElementById("stab").innerText=game.stab;
+document.getElementById("year").innerText=game.year;
+document.getElementById("gen").innerText=game.generals;
+document.getElementById("units").innerText=`Infantry: ${game.units.infantry}, Cavalry: ${game.units.cavalry}, Archer: ${game.units.archer}`;
+
+let statusHTML="";
+kingdoms.forEach(k=>{statusHTML+=`<p>${k.name} - Owner: ${k.owner?'Player':'AI'} - Units: I:${k.units.infantry} C:${k.units.cavalry} A:${k.units.archer}</p>`;});
+document.getElementById("aiStatus").innerHTML=statusHTML;
 }
 
-// ====== ARMY / UNITS ======
-function recruit(){let n=Number(document.getElementById("recNum").value);if(n>0 && game.pop>=n && game.food>=n/2){game.pop-=n;game.food-=n/2;kingdoms.forEach(k=>{if(k.owner)k.army.infantry+=n;});}render();}
-function addUnit(t){if(game.army>=100){game.army-=100;game.units.push(t);render();}} 
-function hireGeneral(){if(game.gold>=150){game.gold-=150;game.generals++;render();}}
+// ===== ARMY MANAGEMENT =====
+function recruit(type){
+let n=0;
+if(type==='infantry') n=Number(document.getElementById('recInf').value);
+else if(type==='cavalry') n=Number(document.getElementById('recCav').value);
+else if(type==='archer') n=Number(document.getElementById('recArc').value);
+if(n>0 && game.pop>=n && game.food>=n/2){game.pop-=n; game.food-=n/2; game.units[type]+=n;}
+render();
+}
 
-// ====== TRADE ======
+// ===== PRODUCTION =====
+function setProd(type){if(type==='farm') game.production.farm=Number(document.getElementById('farmNum').value);
+if(type==='factory') game.production.factory=Number(document.getElementById('facNum').value); render();}
+
+// ===== TRADE =====
 function sellFood(){if(game.food>=100){game.food-=100;game.gold+=80;render();}}
 function buyFood(){if(game.gold>=90){game.gold-=90;game.food+=100;render();}}
 
-// ====== COUNCIL ======
+// ===== COUNCIL / LAWS =====
 function applyTax(){let t=Number(document.getElementById("tax").value);game.gold+=t*10;game.stab-=t/2;render();}
-function law(l){if(l=="tax"){game.gold+=200;game.stab-=10;} if(l=="growth"){game.pop+=200;game.gold-=50;} if(l=="military"){kingdoms.forEach(k=>{if(k.owner)k.army.infantry+=50;});game.stab-=5;} if(l=="trade"){game.gold+=100;game.food-=20;} render();}
+function law(l){if(l=='tax'){game.gold+=200;game.stab-=10;}
+if(l=='growth'){game.pop+=200;game.gold-=50;}
+if(l=='military'){game.units.infantry+=50;game.units.cavalry+=20;game.units.archer+=30;game.stab-=5;}
+if(l=='trade'){game.gold+=100;game.food-=20;} render();}
 
-// ====== END TURN ======
-function endTurn(){
-game.year++; 
-kingdoms.forEach(k=>{if(k.owner){
-game.food+=k.production.farm*50;
-game.gold+=k.production.factory*20;
-}}); 
-aiTurn(); randomEvents(); render();
+// ===== ATTACK =====
+function updateTargets(){let sel=document.getElementById("targetSelect"); sel.innerHTML=""; kingdoms.forEach((k,i)=>{if(!k.owner) sel.innerHTML+=`<option value="${i}">${k.name}</option>`});}
+
+function attack(){
+let idx=Number(document.getElementById("targetSelect").value);
+let target=kingdoms[idx];
+let atkInf=Number(document.getElementById("atkInf").value);
+let atkCav=Number(document.getElementById("atkCav").value);
+let atkArc=Number(document.getElementById("atkArc").value);
+
+if(atkInf>game.units.infantry || atkCav>game.units.cavalry || atkArc>game.units.archer){alert("Not enough units!"); return;}
+game.units.infantry-=atkInf; game.units.cavalry-=atkCav; game.units.archer-=atkArc;
+
+let atkPower=atkInf + atkCav*2 + atkArc;
+let defPower=target.units.infantry + target.units.cavalry*2 + target.units.archer;
+if(atkPower>defPower){target.owner=true;alert(`You conquered ${target.name}!`);}
+else{alert(`Attack failed on ${target.name}`);}
+
+updateTargets();
+render();
 }
 
-// ====== AI & EVENTS ======
-function aiTurn(){kingdoms.forEach(k=>{if(!k.owner){for(let u in k.army){k.army[u]+=5;} if(Math.random()<0.3){let target=kingdoms[Math.floor(Math.random()*kingdoms.length)]; if(target.owner && target.name!=k.name)attackKingdomAI(k,target);}}});}
-function attackKingdomAI(ai,target){let aiPower=ai.army.infantry+ai.army.cavalry*2+ai.army.archer;if(aiPower>target.army.infantry+target.army.cavalry*2+target.army.archer){target.owner=false;ai.army.infantry+=50;}}
-
-function randomEvents(){kingdoms.forEach(k=>{if(k.owner && Math.random()*(100-game.stab)>90){let lost=Math.floor(k.army.infantry*0.2);k.army.infantry-=lost;game.army-=lost;alert(`Revolt in ${k.name}! Army lost: ${lost}`);}});if(Math.random()<0.03){let loss=Math.floor(game.pop*0.1);game.pop-=loss;alert("Plague! Population lost: "+loss);}}
-  
-// ====== SAVE / LOAD ======
-function saveGame(){localStorage.setItem("AOCFinalProPlusUpgrade",JSON.stringify({game,kingdoms}));alert("Game Saved");}
-function loadGame(){let d=localStorage.getItem("AOCFinalProPlusUpgrade"); if(d){let dat=JSON.parse(d);game=dat.game; kingdoms=dat.kingdoms; render(); alert("Game Loaded");}}
-
-// INITIAL RENDER
+// ===== TURN SYSTEM =====
+function endTurn(){
+game.year++;
+game.food+=game.production.farm*50;
+game.gold+=game.production.factory*20;
+aiTurn();
 render();
+}
+
+// ===== AI TURN =====
+function aiTurn(){
+kingdoms.forEach(k=>{
+if(!k.owner){
+for(let u in k.units){k.units[u]+=Math.floor(Math.random()*5);} // army growth
+// AI attacks other AI or player
+let possibleTargets=kingdoms.filter(t=>t!==k && !t.owner?true:t.owner!==true); // attack player or other AI
+if(possibleTargets.length>0 && Math.random()<0.4){
+let target=possibleTargets[Math.floor(Math.random()*possibleTargets.length)];
+let atkInf=Math.min(k.units.infantry, Math.floor(Math.random()*50));
+let atkCav=Math.min(k.units.cavalry, Math.floor(Math.random()*25));
+let atkArc=Math.min(k.units.archer, Math.floor(Math.random()*25));
+
+k.units.infantry-=atkInf; k.units.cavalry-=atkCav; k.units.archer-=atkArc;
+
+let atkPower=atkInf + atkCav*2 + atkArc;
+let defPower=target.units.infantry + target.units.cavalry*2 + target.units.archer;
+if(atkPower>defPower){target.owner=false; if(target===player){alert(`${k.name} conquered your kingdom!`);} else {target.owner=false;} target.units={infantry:Math.floor(atkInf/2),cavalry:Math.floor(atkCav/2),archer:Math.floor(atkArc/2)};}
+}
+}
+});
+updateTargets();
+}
+
+// ===== SAVE / LOAD =====
+function saveGame(){localStorage.setItem("MedievalSimAIWar",JSON.stringify({game,kingdoms})); alert("Game Saved");}
+function loadGame(){let d=localStorage.getItem("MedievalSimAIWar"); if(d){let dat=JSON.parse(d);game=dat.game; kingdoms=dat.kingdoms; render(); alert("Game Loaded");}}
+
+// ===== INIT =====
+initKingdoms();
+let sel=document.getElementById("kingdomSelect");
+kingdoms.forEach((k,i)=>{sel.innerHTML+=`<option value="${i}">${k.name}</option>`});
 </script>
 
 </body>
