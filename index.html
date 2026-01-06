@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AOC++ FINAL PRO++</title>
+<title>AOC++ FINAL PRO++ UPGRADE</title>
 <style>
 body{margin:0;font-family:Arial;background:#020617;color:#e5e7eb}
 .top{display:flex;flex-wrap:wrap;gap:6px;padding:8px;background:#020617;font-size:13px}
@@ -93,46 +93,23 @@ Tax Rate: <input type="number" id="tax" value="10"> % <button onclick="applyTax(
 
 <script>
 // ====== GAME STATE ======
-let game={gold:600,food:500,pop:1600,army:500,stab:70,year:1400,units:[],generals:0};
+let game={gold:600,food:500,pop:1600,stab:70,year:1400,units:[],generals:0,army:0};
 
 // ====== KINGDOMS ======
 let kingdoms=[
-{name:"England",x:10,y:20,army:400,owner:true},
-{name:"France",x:25,y:30,army:450,owner:false},
-{name:"HRE",x:40,y:25,army:500,owner:false},
-{name:"Castile",x:15,y:45,army:350,owner:false},
-{name:"Portugal",x:5,y:55,army:300,owner:false},
-{name:"Poland",x:50,y:20,army:400,owner:false},
-{name:"Hungary",x:45,y:35,army:380,owner:false},
-{name:"Ottoman",x:60,y:45,army:600,owner:false},
-{name:"Mamluk",x:65,y:55,army:500,owner:false},
-{name:"Timurid",x:70,y:40,army:650,owner:false},
-{name:"Ming",x:85,y:35,army:800,owner:false},
-{name:"Delhi",x:75,y:55,army:600,owner:false},
-{name:"Japan",x:90,y:15,army:350,owner:false},
-{name:"Korea",x:85,y:20,army:300,owner:false},
-{name:"Venice",x:35,y:40,army:250,owner:false},
-{name:"Genoa",x:30,y:45,army:200,owner:false},
-{name:"Aragon",x:20,y:50,army:300,owner:false},
-{name:"Scotland",x:5,y:30,army:150,owner:false},
-{name:"Norway",x:10,y:10,army:120,owner:false},
-{name:"Sweden",x:15,y:10,army:130,owner:false},
-{name:"Denmark",x:20,y:15,army:140,owner:false},
-{name:"Byzantine",x:60,y:35,army:500,owner:false},
-{name:"Persia",x:75,y:45,army:600,owner:false},
-{name:"Austria",x:45,y:30,army:400,owner:false},
-{name:"Bohemia",x:50,y:25,army:380,owner:false}
+{name:"England",x:10,y:20,army:{infantry:200,cavalry:50,archer:50},population:1000,owner:true,production:{farm:2,factory:1}},
+{name:"France",x:25,y:30,army:{infantry:250,cavalry:100,archer:100},population:1200,owner:false,production:{farm:3,factory:1}},
+{name:"HRE",x:40,y:25,army:{infantry:300,cavalry:100,archer:100},population:1400,owner:false,production:{farm:2,factory:2}},
+{name:"Castile",x:15,y:45,army:{infantry:150,cavalry:100,archer:100},population:900,owner:false,production:{farm:2,factory:1}}
 ];
 
 // ====== PANEL MANAGEMENT ======
-function openP(id){
-document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
-document.getElementById(id).classList.add("active");
-render();
-}
+function openP(id){document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));document.getElementById(id).classList.add("active");render();}
 
 // ====== RENDER ======
 function render(){
+game.army=0;
+kingdoms.forEach(k=>{if(k.owner){for(let u in k.army){game.army+=k.army[u];}}});
 document.getElementById("gold").innerText=game.gold;
 document.getElementById("food").innerText=game.food;
 document.getElementById("pop").innerText=game.pop;
@@ -141,6 +118,7 @@ document.getElementById("stab").innerText=game.stab;
 document.getElementById("year").innerText=game.year;
 document.getElementById("gen").innerText=game.generals;
 document.getElementById("units").innerText=game.units.join(", ")||"No units";
+renderMap();
 }
 
 // ====== MAP ======
@@ -150,7 +128,8 @@ const map=document.getElementById("map"); map.innerHTML="";
 kingdoms.forEach((k,i)=>{
 let d=document.createElement("div");
 d.className="k "+(k.owner?"owned":"enemy");
-d.style.left=k.x+"%"; d.style.top=k.y+"%"; d.innerText=k.name;
+d.style.left=k.x+"%"; d.style.top=k.y+"%";
+d.innerText=k.name;
 d.onclick=()=>infoK(i); map.appendChild(d);
 });
 }
@@ -160,9 +139,16 @@ function infoK(i){
 let k=kingdoms[i]; openP("info");
 info.innerHTML=`
 <h3>${k.name}</h3>
-Army: ${k.army}<br>
-Pop: ${k.pop||Math.floor(k.army/2+100)}<br>
+Population: ${k.population}<br>
 Status: ${k.owner?"Owned":"Enemy"}<br>
+Army:<br>
+&nbsp;🛡 Infantry: ${k.army.infantry}<br>
+&nbsp;🐎 Cavalry: ${k.army.cavalry}<br>
+&nbsp;🏹 Archer: ${k.army.archer}<br>
+Generals: ${k.owner?game.generals:0}<br>
+Production:<br>
+&nbsp;🌾 Farm: ${k.production.farm} per turn<br>
+&nbsp;🏭 Factory: ${k.production.factory} per turn<br>
 ${!k.owner?`<button onclick="attack(${i})">Attack</button>`:""}
 <button onclick="openMap()">Back</button>`;
 }
@@ -171,19 +157,16 @@ ${!k.owner?`<button onclick="attack(${i})">Attack</button>`:""}
 function attack(i){
 let enemy=kingdoms[i];
 let power=game.army + game.generals*100 + game.units.length*50;
-if(power>enemy.army){enemy.owner=true;game.gold+=120;game.stab+=3;}
-else{game.army-=150;game.stab-=5;}
+let enemyPower=enemy.army.infantry + enemy.army.cavalry*2 + enemy.army.archer;
+if(power>enemyPower){enemy.owner=true;game.gold+=120;game.stab+=3;}
+else{let lost=Math.floor(enemyPower/5);game.army-=lost;game.stab-=5;}
 aiTurn(); openMap(); render();
 }
 
-// ====== ARMY ======
-function recruit(){
-let n=Number(document.getElementById("recNum").value);
-if(n>0 && game.pop>=n && game.food>=n/2){game.pop-=n;game.food-=n/2;game.army+=n;}
-render();
-}
-function addUnit(t){if(game.army>=100){game.army-=100;game.units.push(t);}render();}
-function hireGeneral(){if(game.gold>=150){game.gold-=150;game.generals++;}render();}
+// ====== ARMY / UNITS ======
+function recruit(){let n=Number(document.getElementById("recNum").value);if(n>0 && game.pop>=n && game.food>=n/2){game.pop-=n;game.food-=n/2;kingdoms.forEach(k=>{if(k.owner)k.army.infantry+=n;});}render();}
+function addUnit(t){if(game.army>=100){game.army-=100;game.units.push(t);render();}} 
+function hireGeneral(){if(game.gold>=150){game.gold-=150;game.generals++;render();}}
 
 // ====== TRADE ======
 function sellFood(){if(game.food>=100){game.food-=100;game.gold+=80;render();}}
@@ -191,25 +174,27 @@ function buyFood(){if(game.gold>=90){game.gold-=90;game.food+=100;render();}}
 
 // ====== COUNCIL ======
 function applyTax(){let t=Number(document.getElementById("tax").value);game.gold+=t*10;game.stab-=t/2;render();}
-function law(l){if(l=="tax"){game.gold+=200;game.stab-=10;} if(l=="growth"){game.pop+=200;game.gold-=50;} if(l=="military"){game.army+=200;game.stab-=5;} if(l=="trade"){game.gold+=100;game.food-=20;} render();}
+function law(l){if(l=="tax"){game.gold+=200;game.stab-=10;} if(l=="growth"){game.pop+=200;game.gold-=50;} if(l=="military"){kingdoms.forEach(k=>{if(k.owner)k.army.infantry+=50;});game.stab-=5;} if(l=="trade"){game.gold+=100;game.food-=20;} render();}
 
-// ====== END TURN / AI / EVENTS ======
+// ====== END TURN ======
 function endTurn(){
-game.year++; game.food+=50; game.pop+=Math.floor(game.pop*(game.stab/200));
+game.year++; 
+kingdoms.forEach(k=>{if(k.owner){
+game.food+=k.production.farm*50;
+game.gold+=k.production.factory*20;
+}}); 
 aiTurn(); randomEvents(); render();
 }
 
-// AI TURN
-function aiTurn(){kingdoms.forEach(k=>{if(!k.owner){if(Math.random()<0.5)k.army+=50;}});}
+// ====== AI & EVENTS ======
+function aiTurn(){kingdoms.forEach(k=>{if(!k.owner){for(let u in k.army){k.army[u]+=5;} if(Math.random()<0.3){let target=kingdoms[Math.floor(Math.random()*kingdoms.length)]; if(target.owner && target.name!=k.name)attackKingdomAI(k,target);}}});}
+function attackKingdomAI(ai,target){let aiPower=ai.army.infantry+ai.army.cavalry*2+ai.army.archer;if(aiPower>target.army.infantry+target.army.cavalry*2+target.army.archer){target.owner=false;ai.army.infantry+=50;}}
 
-// RANDOM EVENTS
-function randomEvents(){
-kingdoms.forEach(k=>{if(k.owner && Math.random()*(100-game.stab)>90){let lost=Math.floor(k.army*0.2);k.army-=lost;game.army-=lost;alert(`Revolt in ${k.name}! Army lost: ${lost}`);}});
-if(Math.random()<0.03){let loss=Math.floor(game.pop*0.1);game.pop-=loss;alert("Plague! Population lost: "+loss);}}
+function randomEvents(){kingdoms.forEach(k=>{if(k.owner && Math.random()*(100-game.stab)>90){let lost=Math.floor(k.army.infantry*0.2);k.army.infantry-=lost;game.army-=lost;alert(`Revolt in ${k.name}! Army lost: ${lost}`);}});if(Math.random()<0.03){let loss=Math.floor(game.pop*0.1);game.pop-=loss;alert("Plague! Population lost: "+loss);}}
   
 // ====== SAVE / LOAD ======
-function saveGame(){localStorage.setItem("AOCFinalProPlus",JSON.stringify({game,kingdoms}));alert("Game Saved");}
-function loadGame(){let d=localStorage.getItem("AOCFinalProPlus"); if(d){let dat=JSON.parse(d);game=dat.game; kingdoms=dat.kingdoms; render(); alert("Game Loaded");}}
+function saveGame(){localStorage.setItem("AOCFinalProPlusUpgrade",JSON.stringify({game,kingdoms}));alert("Game Saved");}
+function loadGame(){let d=localStorage.getItem("AOCFinalProPlusUpgrade"); if(d){let dat=JSON.parse(d);game=dat.game; kingdoms=dat.kingdoms; render(); alert("Game Loaded");}}
 
 // INITIAL RENDER
 render();
