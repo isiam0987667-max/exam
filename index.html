@@ -3,47 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AOC++ Medieval War Simulator</title>
-
+<title>AOC++ FINAL PRO++</title>
 <style>
 body{margin:0;font-family:Arial;background:#020617;color:#e5e7eb}
-.top{background:#020617;padding:6px;display:flex;gap:6px;flex-wrap:wrap;font-size:13px}
+.top{display:flex;flex-wrap:wrap;gap:6px;padding:8px;background:#020617;font-size:13px}
 .top span{background:#1e293b;padding:4px 6px;border-radius:6px}
-button{background:#2563eb;color:#fff;border:none;padding:8px;border-radius:6px}
-.panel{display:none;padding:8px}
+.panel{display:none;padding:10px;overflow-y:auto;max-height:70vh}
 .active{display:block}
+button,input{padding:8px;border-radius:6px;border:none;margin:4px;cursor:pointer}
+button{background:#2563eb;color:#fff}
+input{width:80px}
 
-/* MAP */
-.map-container{
-position:relative;
-width:100%;
-height:70vh;
-background:#0f172a;
-border-top:2px solid #1e293b;
-}
-.kingdom{
-position:absolute;
-background:#16a34a;
-color:#000;
-padding:4px 6px;
-border-radius:6px;
-font-size:11px;
-}
-.enemy{background:#dc2626;color:#fff}
-.menu{
-position:fixed;
-bottom:0;
-width:100%;
-background:#020617;
-display:flex;
-justify-content:space-around;
-}
+.map{position:relative;height:65vh;background:linear-gradient(#0f172a,#020617);border-top:2px solid #1e293b;}
+.k{position:absolute;padding:4px 6px;font-size:11px;border-radius:6px;color:#fff;text-align:center;font-weight:bold}
+.enemy{background:#dc2626;}
+.owned{background:#16a34a;}
+
+.menu{position:fixed;bottom:0;width:100%;background:#020617;display:flex;flex-wrap:wrap;justify-content:space-around}
+.box{background:#1e293b;padding:8px;border-radius:8px;margin:6px 0}
 </style>
 </head>
 
 <body>
-
-<!-- TOP BAR -->
 <div class="top">
 <span>💰 <b id="gold"></b></span>
 <span>🍞 <b id="food"></b></span>
@@ -53,111 +34,184 @@ justify-content:space-around;
 <span>📅 <b id="year"></b></span>
 </div>
 
-<!-- HOME -->
 <div id="home" class="panel active">
-<h2>🌍 Medieval World</h2>
-<button onclick="openMap()">OPEN WORLD MAP</button>
+<h2>🌍 Medieval World Simulator</h2>
+<button onclick="openP('mapP')">Open Map</button>
+<button onclick="openP('armyP')">Army</button>
+<button onclick="openP('trade')">Trade</button>
+<button onclick="openP('council')">Council</button>
+<button onclick="saveGame()">💾 Save Game</button>
+<button onclick="loadGame()">📂 Load Game</button>
 </div>
 
-<!-- MAP -->
-<div id="mapPanel" class="panel">
-<div class="map-container" id="map"></div>
-</div>
-
-<!-- INFO -->
+<div id="mapP" class="panel"><div class="map" id="map"></div></div>
 <div id="info" class="panel"></div>
 
+<div id="armyP" class="panel">
+<h3>⚔ Army & Units</h3>
+<div class="box">
+Recruit Soldiers: <input type="number" id="recNum" value="100">
+<button onclick="recruit()">Recruit</button>
+</div>
+<div class="box">
+<h4>🛡 Units</h4>
+<button onclick="addUnit('Infantry')">🛡 Infantry</button>
+<button onclick="addUnit('Cavalry')">🐎 Cavalry</button>
+<button onclick="addUnit('Archer')">🏹 Archer</button>
+<p id="units">No units</p>
+</div>
+<div class="box">
+<button onclick="hireGeneral()">🎖 Hire General (150 Gold)</button>
+<p>Generals: <b id="gen"></b></p>
+</div>
+</div>
+
+<div id="trade" class="panel">
+<h3>🤝 Trade</h3>
+<button onclick="sellFood()">Sell 100 Food → +80 Gold</button>
+<button onclick="buyFood()">Buy 100 Food → -90 Gold</button>
+</div>
+
+<div id="council" class="panel">
+<h3>🏛 Council & Laws</h3>
+<div class="box">
+Tax Rate: <input type="number" id="tax" value="10"> % <button onclick="applyTax()">Apply</button>
+</div>
+<div class="box">
+<button onclick="law('tax')">High Tax Law</button>
+<button onclick="law('growth')">Population Growth Law</button>
+<button onclick="law('military')">Military Focus Law</button>
+<button onclick="law('trade')">Trade Focus Law</button>
+</div>
+</div>
+
 <div class="menu">
-<button onclick="open('home')">Home</button>
-<button onclick="open('mapPanel')">Map</button>
+<button onclick="openP('home')">Home</button>
+<button onclick="openP('mapP')">Map</button>
 <button onclick="endTurn()">End Turn</button>
 </div>
 
 <script>
-let game={
-gold:600,food:500,pop:1600,army:500,stab:70,year:1400,
-generals:1
-};
+// ====== GAME STATE ======
+let game={gold:600,food:500,pop:1600,army:500,stab:70,year:1400,units:[],generals:0};
 
+// ====== KINGDOMS ======
 let kingdoms=[
-{name:"England",x:30,y:25,army:400,owner:true},
-{name:"France",x:35,y:35,army:450,owner:false},
-{name:"Holy Roman Empire",x:45,y:30,army:500,owner:false},
-{name:"Castile",x:30,y:45,army:350,owner:false},
-{name:"Ottoman Empire",x:55,y:40,army:600,owner:false},
-{name:"Mamluk Sultanate",x:60,y:55,army:500,owner:false},
-{name:"Timurid Empire",x:70,y:45,army:650,owner:false},
-{name:"Ming China",x:85,y:35,army:800,owner:false},
-{name:"Delhi Sultanate",x:75,y:55,army:600,owner:false}
+{name:"England",x:10,y:20,army:400,owner:true},
+{name:"France",x:25,y:30,army:450,owner:false},
+{name:"HRE",x:40,y:25,army:500,owner:false},
+{name:"Castile",x:15,y:45,army:350,owner:false},
+{name:"Portugal",x:5,y:55,army:300,owner:false},
+{name:"Poland",x:50,y:20,army:400,owner:false},
+{name:"Hungary",x:45,y:35,army:380,owner:false},
+{name:"Ottoman",x:60,y:45,army:600,owner:false},
+{name:"Mamluk",x:65,y:55,army:500,owner:false},
+{name:"Timurid",x:70,y:40,army:650,owner:false},
+{name:"Ming",x:85,y:35,army:800,owner:false},
+{name:"Delhi",x:75,y:55,army:600,owner:false},
+{name:"Japan",x:90,y:15,army:350,owner:false},
+{name:"Korea",x:85,y:20,army:300,owner:false},
+{name:"Venice",x:35,y:40,army:250,owner:false},
+{name:"Genoa",x:30,y:45,army:200,owner:false},
+{name:"Aragon",x:20,y:50,army:300,owner:false},
+{name:"Scotland",x:5,y:30,army:150,owner:false},
+{name:"Norway",x:10,y:10,army:120,owner:false},
+{name:"Sweden",x:15,y:10,army:130,owner:false},
+{name:"Denmark",x:20,y:15,army:140,owner:false},
+{name:"Byzantine",x:60,y:35,army:500,owner:false},
+{name:"Persia",x:75,y:45,army:600,owner:false},
+{name:"Austria",x:45,y:30,army:400,owner:false},
+{name:"Bohemia",x:50,y:25,army:380,owner:false}
 ];
 
-function open(id){
+// ====== PANEL MANAGEMENT ======
+function openP(id){
 document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
 document.getElementById(id).classList.add("active");
+render();
 }
 
-function openMap(){
-open("mapPanel");
-renderMap();
-}
-
+// ====== RENDER ======
 function render(){
-gold.innerText=game.gold;
-food.innerText=game.food;
-pop.innerText=game.pop;
-army.innerText=game.army;
-stab.innerText=game.stab;
-year.innerText=game.year;
+document.getElementById("gold").innerText=game.gold;
+document.getElementById("food").innerText=game.food;
+document.getElementById("pop").innerText=game.pop;
+document.getElementById("army").innerText=game.army;
+document.getElementById("stab").innerText=game.stab;
+document.getElementById("year").innerText=game.year;
+document.getElementById("gen").innerText=game.generals;
+document.getElementById("units").innerText=game.units.join(", ")||"No units";
 }
 
+// ====== MAP ======
+function openMap(){openP('mapP');renderMap();}
 function renderMap(){
-const map=document.getElementById("map");
-map.innerHTML="";
+const map=document.getElementById("map"); map.innerHTML="";
 kingdoms.forEach((k,i)=>{
 let d=document.createElement("div");
-d.className="kingdom "+(k.owner?"":"enemy");
-d.style.left=k.x+"%";
-d.style.top=k.y+"%";
-d.innerText=k.name;
-d.onclick=()=>openInfo(i);
-map.appendChild(d);
+d.className="k "+(k.owner?"owned":"enemy");
+d.style.left=k.x+"%"; d.style.top=k.y+"%"; d.innerText=k.name;
+d.onclick=()=>infoK(i); map.appendChild(d);
 });
 }
 
-function openInfo(i){
-let k=kingdoms[i];
-open("info");
+// ====== INFO ======
+function infoK(i){
+let k=kingdoms[i]; openP("info");
 info.innerHTML=`
 <h3>${k.name}</h3>
-<p>Army: ${k.army}</p>
-<p>Status: ${k.owner?"Your Kingdom":"Enemy"}</p>
-${!k.owner?`<button onclick="attack(${i})">⚔ Attack</button>`:""}
-<button onclick="open('mapPanel')">Back</button>
-`;
+Army: ${k.army}<br>
+Pop: ${k.pop||Math.floor(k.army/2+100)}<br>
+Status: ${k.owner?"Owned":"Enemy"}<br>
+${!k.owner?`<button onclick="attack(${i})">Attack</button>`:""}
+<button onclick="openMap()">Back</button>`;
 }
 
+// ====== ATTACK ======
 function attack(i){
 let enemy=kingdoms[i];
-let myPower=game.army + game.generals*100 + game.stab;
-if(myPower>enemy.army){
-enemy.owner=true;
-game.gold+=120;
-game.stab+=3;
-}else{
-game.army-=150;
-game.stab-=5;
-}
-openMap();
-render();
+let power=game.army + game.generals*100 + game.units.length*50;
+if(power>enemy.army){enemy.owner=true;game.gold+=120;game.stab+=3;}
+else{game.army-=150;game.stab-=5;}
+aiTurn(); openMap(); render();
 }
 
+// ====== ARMY ======
+function recruit(){
+let n=Number(document.getElementById("recNum").value);
+if(n>0 && game.pop>=n && game.food>=n/2){game.pop-=n;game.food-=n/2;game.army+=n;}
+render();
+}
+function addUnit(t){if(game.army>=100){game.army-=100;game.units.push(t);}render();}
+function hireGeneral(){if(game.gold>=150){game.gold-=150;game.generals++;}render();}
+
+// ====== TRADE ======
+function sellFood(){if(game.food>=100){game.food-=100;game.gold+=80;render();}}
+function buyFood(){if(game.gold>=90){game.gold-=90;game.food+=100;render();}}
+
+// ====== COUNCIL ======
+function applyTax(){let t=Number(document.getElementById("tax").value);game.gold+=t*10;game.stab-=t/2;render();}
+function law(l){if(l=="tax"){game.gold+=200;game.stab-=10;} if(l=="growth"){game.pop+=200;game.gold-=50;} if(l=="military"){game.army+=200;game.stab-=5;} if(l=="trade"){game.gold+=100;game.food-=20;} render();}
+
+// ====== END TURN / AI / EVENTS ======
 function endTurn(){
-game.year++;
-game.food+=60;
-game.pop+=Math.floor(game.pop*(game.stab/200));
-render();
+game.year++; game.food+=50; game.pop+=Math.floor(game.pop*(game.stab/200));
+aiTurn(); randomEvents(); render();
 }
 
+// AI TURN
+function aiTurn(){kingdoms.forEach(k=>{if(!k.owner){if(Math.random()<0.5)k.army+=50;}});}
+
+// RANDOM EVENTS
+function randomEvents(){
+kingdoms.forEach(k=>{if(k.owner && Math.random()*(100-game.stab)>90){let lost=Math.floor(k.army*0.2);k.army-=lost;game.army-=lost;alert(`Revolt in ${k.name}! Army lost: ${lost}`);}});
+if(Math.random()<0.03){let loss=Math.floor(game.pop*0.1);game.pop-=loss;alert("Plague! Population lost: "+loss);}}
+  
+// ====== SAVE / LOAD ======
+function saveGame(){localStorage.setItem("AOCFinalProPlus",JSON.stringify({game,kingdoms}));alert("Game Saved");}
+function loadGame(){let d=localStorage.getItem("AOCFinalProPlus"); if(d){let dat=JSON.parse(d);game=dat.game; kingdoms=dat.kingdoms; render(); alert("Game Loaded");}}
+
+// INITIAL RENDER
 render();
 </script>
 
